@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jarvis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070912;--card:rgba(255,255,255,.045);--card2:rgba(255,255,255,.07);--line:rgba(255,255,255,.09);
+  --text:#eef1f8;--muted:#8b94a8;--accent:#7aa2ff;--accent2:#a78bfa;--ok:#5eead4;--warn:#fbbf24;--bad:#fb7185;
+  --r:20px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"SF Pro Display","Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.45;overflow:hidden}
+.bg{position:fixed;inset:0;z-index:-1;background:
+  radial-gradient(900px 500px at 12% -10%,rgba(109,74,255,.22),transparent 60%),
+  radial-gradient(800px 500px at 95% 10%,rgba(122,162,255,.16),transparent 60%),
+  radial-gradient(700px 500px at 50% 120%,rgba(94,234,212,.10),transparent 60%),var(--bg)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.label{font-size:11px;letter-spacing:.14em;color:var(--muted);font-weight:600}
+.tiny{font-size:12px;color:var(--muted)}
+.link{background:none;border:0;color:var(--accent);font-size:12px;padding:2px 4px}
+.link:hover{text-decoration:underline}
+
+/* header */
+.top{height:68px;max-width:860px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 6px 24px rgba(122,162,255,.4);position:relative}
+.mark:after{content:"";position:absolute;inset:9px;border-radius:50%;border:2px solid rgba(255,255,255,.85)}
+.brand b{display:block;font-size:17px;font-weight:600;letter-spacing:.01em}
+.brand small{color:var(--muted);font-size:12px}
+.pills{display:flex;align-items:center;gap:8px}
+.pill{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.pill.off i{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.icon{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--line);font-size:16px;display:grid;place-items:center}
+.icon:hover{background:var(--card2)}
+
+/* layout */
+.app{max-width:860px;margin:0 auto;padding:0 20px 20px;display:grid;grid-template-columns:minmax(0,1fr);gap:18px;height:calc(100vh - 68px)}
+.side,.pills .pill{display:none!important}
+.assistant{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.side{display:flex;flex-direction:column;gap:14px;overflow-y:auto;min-height:0;padding-right:2px;scrollbar-width:thin;scrollbar-color:#2a3050 transparent}
+
+/* stage / orb */
+.stage{padding:18px 16px 8px;text-align:center;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(122,162,255,.06),transparent)}
+.orbWrap{position:relative;width:150px;height:150px;margin:0 auto;display:grid;place-items:center;cursor:pointer;outline:none}
+.orb{width:112px;height:112px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#dbe6ff 0,#7aa2ff 38%,#6d4aff 78%,#3b21a8 100%);box-shadow:0 0 50px rgba(122,162,255,.45),inset -8px -10px 24px rgba(10,5,60,.5),inset 6px 6px 16px rgba(255,255,255,.25);animation:float 6s ease-in-out infinite;transition:filter .4s}
+.halo{position:absolute;inset:8px;border-radius:50%;border:1px solid rgba(122,162,255,.45);opacity:0}
+body.listening .halo{animation:halo 2.2s ease-out infinite}
+body.listening .halo.h2{animation-delay:1.1s}
+body.speaking .orb{background:radial-gradient(circle at 32% 28%,#d9fff6 0,#5eead4 40%,#2a8cff 88%);box-shadow:0 0 60px rgba(94,234,212,.5),inset -8px -10px 24px rgba(0,30,60,.45);animation:talk .7s ease-in-out infinite}
+body.thinking:not(.speaking) .orb{animation:think 2.2s linear infinite}
+body.off .orb{filter:grayscale(.9) brightness(.65);animation:none}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes halo{0%{transform:scale(.8);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+@keyframes talk{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes think{to{filter:hue-rotate(360deg)}}
+.bars{display:flex;gap:4px;justify-content:center;align-items:center;height:18px;margin-top:2px}
+.bars i{width:3px;height:4px;border-radius:2px;background:var(--accent);opacity:.5;transition:height .2s}
+body.listening .bars i,body.speaking .bars i{animation:bar 1s ease-in-out infinite;opacity:1}
+body.speaking .bars i{background:var(--ok)}
+.bars i:nth-child(2){animation-delay:.12s!important}.bars i:nth-child(3){animation-delay:.24s!important}.bars i:nth-child(4){animation-delay:.36s!important}.bars i:nth-child(5){animation-delay:.48s!important}
+@keyframes bar{0%,100%{height:4px}50%{height:16px}}
+.status{font-size:13px;font-weight:500;margin-top:8px}
+.caption{min-height:20px;color:var(--muted);font-size:13px;font-style:italic;margin-top:2px;padding:0 10px}
+
+/* chat */
+.log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#2a3050 transparent}
+.msg{display:flex}
+.msg.user{justify-content:flex-end}
+.bubble{max-width:82%;padding:10px 14px;border-radius:16px;word-wrap:break-word;animation:pop .25s ease}
+.msg.bot .bubble{background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:5px}
+.msg.user .bubble{background:linear-gradient(135deg,#4f6df5,#7c5cf0);border-bottom-right-radius:5px;color:#fff}
+.bubble a{color:var(--accent)}
+.bubble code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:5px}
+.bubble small{color:var(--muted)}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;padding:7px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:#c9d2e6;font-size:12.5px;transition:.15s}
+.chip:hover{background:var(--card2);border-color:rgba(122,162,255,.5);color:#fff}
+.composer{display:flex;gap:10px;align-items:center;padding:12px 14px 14px;border-top:1px solid var(--line)}
+.composer input{flex:1;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:99px;padding:13px 18px;outline:none;transition:.15s}
+.composer input:focus{border-color:rgba(122,162,255,.6);box-shadow:0 0 0 3px rgba(122,162,255,.15)}
+.mic,.send{width:46px;height:46px;border-radius:50%;border:0;display:grid;place-items:center;flex:none}
+.send{background:var(--card2);border:1px solid var(--line)}
+.send:hover{background:rgba(255,255,255,.12)}
+.mic{background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 6px 20px rgba(122,162,255,.4);transition:.2s}
+.mic:hover{transform:scale(1.05)}
+body:not(.off) .mic{background:linear-gradient(135deg,#34d399,#5eead4);box-shadow:0 6px 20px rgba(94,234,212,.4)}
+body.listening .mic{animation:micpulse 1.6s infinite}
+@keyframes micpulse{0%{box-shadow:0 0 0 0 rgba(94,234,212,.5)}100%{box-shadow:0 0 0 16px rgba(94,234,212,0)}}
+.mic svg,.send svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+body:not(.off) .mic svg{stroke:#052e2b}
+
+/* side cards */
+.side .card{padding:16px 18px}
+.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.clock .time{display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+#clkTime{font-size:58px;font-weight:300;letter-spacing:-.03em;line-height:1}
+.sec{display:flex;flex-direction:column;font-size:13px;color:var(--muted);line-height:1.15}
+.sec b{font-size:20px;font-weight:400;color:var(--accent)}
+.sec em{font-style:normal;font-weight:600}
+.date{margin-top:6px;color:#c9d2e6;font-size:14px}
+.daybar{height:4px;border-radius:4px;background:rgba(255,255,255,.08);margin:12px 0 5px;overflow:hidden}
+.daybar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width 1s}
+.world{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+.world div{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;padding:8px 6px;text-align:center}
+.world b{display:block;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.world span{font-size:10.5px;color:var(--muted)}
+
+.wxTop{display:flex;align-items:center;gap:14px}
+.wxIcon{font-size:46px;line-height:1}
+.wxTemp{font-size:42px;font-weight:300;line-height:1;letter-spacing:-.02em}
+.wxDesc{color:#c9d2e6}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:14px 0 12px}
+.fact{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:12px;padding:8px 4px;text-align:center}
+.fact b{display:block;font-size:13px;font-weight:600}
+.fact span{font-size:10.5px;color:var(--muted)}
+.fc{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fc div{text-align:center;padding:8px 4px;border-radius:12px;background:rgba(255,255,255,.035)}
+.fc .d{font-size:11px;color:var(--muted)}.fc .e{font-size:22px}.fc .t{font-size:12px}.fc .t em{font-style:normal;color:var(--muted)}
+.empty{text-align:center;padding:6px 0}
+.empty p{margin:0 0 10px;color:var(--muted)}
+.inline{display:flex;gap:8px}
+.inline input,.field{flex:1;min-width:0;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:12px;padding:9px 12px;outline:none}
+.inline input:focus,.field:focus{border-color:rgba(122,162,255,.6)}
+.btn{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-weight:500;transition:.15s}
+.btn:hover{background:rgba(255,255,255,.13)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;color:#fff}
+.btn.primary:hover{filter:brightness(1.1)}
+
+.tabs{display:flex;gap:4px;background:rgba(0,0,0,.25);padding:4px;border-radius:12px;margin-bottom:12px}
+.tabs button{flex:1;border:0;background:none;border-radius:9px;padding:7px;color:var(--muted);font-weight:500}
+.tabs button.on{background:var(--card2);color:var(--text)}
+.tabs span{margin-left:6px;font-size:11px;background:rgba(122,162,255,.25);padding:1px 7px;border-radius:99px;color:#cfe0ff}
+.panel[hidden]{display:none}
+.list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.item{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.item.dim{opacity:.5}
+.item .big{font-size:22px;font-weight:300;font-variant-numeric:tabular-nums;min-width:92px}
+.item .big small{font-size:11px;margin-left:2px;color:var(--muted)}
+.item .meta{flex:1;min-width:0}
+.item .meta b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .meta span{font-size:12px;color:var(--muted)}
+.x{background:none;border:0;color:var(--muted);font-size:18px;width:28px;height:28px;border-radius:50%}
+.x:hover{background:rgba(251,113,133,.18);color:var(--bad)}
+.sw{position:relative;width:38px;height:22px;flex:none}
+.sw input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer;z-index:1}
+.sw u{position:absolute;inset:0;background:rgba(255,255,255,.14);border-radius:99px;transition:.2s}
+.sw u:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+u{background:var(--ok)}
+.sw input:checked+u:after{transform:translateX(16px);background:#06322c}
+.none{color:var(--muted);text-align:center;padding:10px 0;font-size:13px}
+.form{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.form .inline input[type=time]{max-width:130px;color-scheme:dark}
+.days{display:flex;gap:5px}
+.days button{flex:1;height:32px;border-radius:50%;max-width:38px;background:rgba(0,0,0,.25);border:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.days button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.bar{height:4px;background:rgba(255,255,255,.08);border-radius:4px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--accent));width:100%}
+
+.mrow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.mrow:last-child{border:0}
+.mrow b{font-weight:500}.mrow small{display:block;color:var(--muted);font-size:11.5px}
+.mrow .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.up{color:var(--ok)}.dn{color:var(--bad)}
+
+/* cricket cards */
+.cric{display:flex;flex-direction:column;gap:8px;min-width:250px}
+.cm{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.ct{display:flex;justify-content:space-between;font-size:10.5px;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.live{color:var(--bad);animation:blink 1.4s infinite}.soon{color:var(--warn)}.done{color:var(--ok)}
+@keyframes blink{50%{opacity:.45}}
+.cn{font-weight:600;margin:4px 0 6px}
+.sc{display:flex;justify-content:space-between;gap:12px;font-size:13.5px}
+.sc b{font-variant-numeric:tabular-nums}.sc small{color:var(--muted);font-weight:400}
+.cs{margin-top:6px;font-size:12.5px;color:#c9d2e6}
+/* dialog */
+dialog{background:#0f1220;color:var(--text);border:1px solid var(--line);border-radius:22px;padding:0;width:min(540px,94vw);max-height:90vh}
+dialog::backdrop{background:rgba(3,5,12,.7);backdrop-filter:blur(6px)}
+.dlg{padding:22px;display:flex;flex-direction:column;gap:18px}
+.dlg h3{margin:0;font-size:18px;font-weight:600}
+.sec2{display:flex;flex-direction:column;gap:9px}
+.sec2>.label{margin-bottom:2px}
+.line{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.line select{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;padding:8px;max-width:260px}
+.line input[type=range]{accent-color:var(--accent)}
+.crow{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:rgba(0,0,0,.22);border-radius:10px;font-size:13px}
+
+/* ringing overlay */
+.ringOv{position:fixed;inset:0;z-index:50;background:rgba(3,5,12,.82);backdrop-filter:blur(10px);display:grid;place-items:center}
+.ringOv[hidden]{display:none}
+.ringCard{text-align:center;padding:36px 40px;border-radius:28px;background:#11152a;border:1px solid var(--line);width:min(380px,90vw);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.bell{font-size:56px;animation:shake .8s infinite}
+@keyframes shake{0%,100%{transform:rotate(0)}20%{transform:rotate(14deg)}40%{transform:rotate(-14deg)}60%{transform:rotate(8deg)}80%{transform:rotate(-8deg)}}
+.ringCard h2{margin:10px 0 2px;font-weight:300;font-size:40px;font-variant-numeric:tabular-nums}
+.ringCard p{margin:0 0 22px;color:var(--muted)}
+.ringBtns{display:flex;gap:10px}.ringBtns .btn{flex:1;padding:13px}
+
+@media (max-width:900px){
+  body{overflow:auto}
+  .app{display:flex;flex-direction:column;height:auto}
+  .assistant{height:calc(100vh - 90px);min-height:520px}
+  .side{overflow:visible}
+  #clkTime{font-size:50px}
+  .bubble{max-width:90%}
+  .top{padding:0 14px}.app{padding:0 14px 20px}
+}
+</style>
+</head>
+<body class="off">
+<div class="bg"></div>
+
+<header class="top">
+  <div class="brand"><div class="mark"></div><div><b>Jarvis</b><small id="greet">Hello</small></div></div>
+  <div class="pills">
+    <span class="pill" id="pillNet"><i></i><span>Online</span></span>
+    <span class="pill" id="pillBat" hidden>🔋 <span id="batTxt">—</span></span>
+    <button class="icon" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<main class="app">
+  <section class="card assistant">
+    <div class="stage">
+      <div class="orbWrap" id="orbWrap" role="button" tabindex="0" aria-label="Turn microphone on or off">
+        <div class="halo"></div><div class="halo h2"></div><div class="orb"></div>
+      </div>
+      <div class="bars"><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="status" id="statusLine">Tap the mic to start</div>
+      <div class="caption" id="caption"></div>
+    </div>
+    <div class="log" id="log"></div>
+    <div class="chips" id="chips"></div>
+    <form class="composer" id="form" autocomplete="off">
+      <input id="txt" placeholder="Ask anything, or tap the mic and talk…" aria-label="Message">
+      <button type="button" class="mic" id="micBtn" title="Microphone" aria-label="Microphone"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <button class="send" title="Send" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </form>
+  </section>
+
+  <aside class="side">
+    <article class="card clock">
+      <div class="row"><span class="label">RIGHT NOW</span><span class="tiny" id="tz"></span></div>
+      <div class="time"><span id="clkTime">--:--</span><span class="sec"><b id="clkSec">00</b><em id="clkAp"></em></span></div>
+      <div class="date" id="clkDate"></div>
+      <div class="daybar"><i id="dayFill"></i></div>
+      <div class="tiny" id="dayTxt"></div>
+      <div class="world" id="world"></div>
+    </article>
+
+    <article class="card">
+      <div class="row"><span class="label">WEATHER</span><span><span class="tiny" id="wxUpd"></span> <button class="link" id="wxRefresh">Refresh</button></span></div>
+      <div id="wxBody"><div class="none">Loading…</div></div>
+    </article>
+
+    <article class="card">
+      <div class="tabs"><button class="on" data-tab="alarms">Alarms<span id="alCount">0</span></button><button data-tab="timers">Timers<span id="tmCount">0</span></button></div>
+      <div class="panel" id="p-alarms">
+        <div class="list" id="alarmList"></div>
+        <form class="form" id="alarmForm">
+          <div class="inline"><input type="time" id="alTime" value="07:00" required><input id="alLabel" placeholder="Label (optional)" maxlength="40"></div>
+          <div class="days" id="alDays"></div>
+          <button class="btn primary">Add alarm</button>
+          <div class="tiny">No days selected = rings once. Try voice: “wake me up at 6:30 tomorrow”.</div>
+        </form>
+      </div>
+      <div class="panel" id="p-timers" hidden>
+        <div class="presets" id="presets"></div>
+        <div class="list" id="timerList"></div>
+        <form class="form" id="timerForm">
+          <div class="inline"><input class="field" type="number" id="tmMin" min="0.1" step="any" placeholder="Minutes" required style="max-width:120px"><input id="tmLabel" placeholder="What for? (optional)" maxlength="40"></div>
+          <button class="btn primary">Start timer</button>
+          <div class="tiny">Voice: “set a timer for 10 minutes” or “remind me to stretch in 30 minutes”.</div>
+        </form>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="row"><span class="label">LIVE MARKETS</span><span><span class="tiny" id="mkUpd"></span> <button class="link" id="mkRefresh">Refresh</button></span></div>
+      <div id="mkBody"><div class="none">Loading…</div></div>
+    </article>
+  </aside>
+</main>
+
+<dialog id="dlg">
+  <div class="dlg">
+    <h3>Settings</h3>
+    <div class="sec2"><span class="label">YOU</span>
+      <div class="line"><span>Your name</span><input class="field" id="setName" placeholder="What should I call you?" style="max-width:260px"></div>
+    </div>
+    <div class="sec2"><span class="label">VOICE</span>
+      <div class="line"><span>Voice</span><select id="voiceSel"></select></div>
+      <div class="line"><span>Speed</span><input type="range" id="rate" min="0.7" max="1.4" step="0.05"></div>
+      <div class="line"><span>Speak replies aloud</span><label class="sw"><input type="checkbox" id="speakChk"><u></u></label></div>
+      <div class="line"><span>Only respond when I say “Jarvis”</span><label class="sw"><input type="checkbox" id="wakeChk"><u></u></label></div>
+    </div>
+    <div class="sec2"><span class="label">LOCATION &amp; UNITS</span>
+      <div class="inline"><input class="field" id="cityInput" placeholder="City for weather"><button class="btn" id="citySet" type="button">Set</button><button class="btn" id="cityGeo" type="button">📍 Use mine</button></div>
+      <div class="line"><span>Temperature</span><select id="unitSel"><option value="C">Celsius (°C)</option><option value="F">Fahrenheit (°F)</option></select></div>
+    </div>
+    <div class="sec2"><span class="label">CRICKET (LIVE SCORES)</span>
+      <input class="field" id="cricKey" placeholder="Free API key from cricketdata.org" autocomplete="off">
+      <div class="tiny">Get a free key at <a href="https://cricketdata.org" target="_blank" style="color:var(--accent)">cricketdata.org</a>. It's stored only in this browser.</div>
+    </div>
+    <div class="sec2"><span class="label">CONTACTS FOR MESSAGES</span>
+      <div id="contactList" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div class="inline"><input class="field" id="cName" placeholder="Name"><input class="field" id="cPhone" placeholder="Phone"></div>
+      <div class="inline"><input class="field" id="cEmail" placeholder="Email (optional)"><button class="btn" id="cAdd" type="button">Save</button></div>
+    </div>
+    <button class="btn primary" id="dlgClose" type="button">Done</button>
+  </div>
+</dialog>
+
+<div class="ringOv" id="ringOv" hidden>
+  <div class="ringCard"><div class="bell">🔔</div><h2 id="ringTitle"></h2><p id="ringSub"></p>
+    <div class="ringBtns"><button class="btn" id="snoozeBtn">Snooze 5 min</button><button class="btn primary" id="stopBtn">Stop</button></div></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const store={get(k,d){try{const v=localStorage.getItem("jv_"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("jv_"+k,JSON.stringify(v))}catch(e){}}};
+let S=Object.assign({name:"",wake:false,voice:"",rate:1,muted:false,city:null,units:"C",cricKey:""},store.get("settings",{}));
+let alarms=store.get("alarms",[]),timers=store.get("timers",[]),book=store.get("contacts",{});
+const saveS=()=>store.set("settings",S),saveA=()=>store.set("alarms",alarms),saveT=()=>store.set("timers",timers),saveB=()=>store.set("contacts",book);
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let active=false,speaking=false,recRunning=false,rec=null,convoUntil=0,pending=null,voices=[];
+
+/* ============ state / status ============ */
+function setCls(c,on){document.body.classList.toggle(c,on);updateStatus()}
+function updateStatus(){
+  const c=document.body.classList;
+  $("statusLine").textContent=!active?"Tap the mic to start":c.contains("speaking")?"Speaking…":c.contains("thinking")?"Thinking…":c.contains("listening")?(S.wake?"Listening for “Jarvis”…":"Listening…"):"Ready";
+}
+const setCaption=t=>$("caption").textContent=t||"";
+function greet(){const h=new Date().getHours();const g=h<5?"Burning the midnight oil":h<12?"Good morning":h<17?"Good afternoon":h<21?"Good evening":"Good night";return g+(S.name?", "+S.name:"")}
+
+/* ============ chat ============ */
+const log=$("log");
+function addMsg(role,html){const d=document.createElement("div");d.className="msg "+role;d.innerHTML=`<div class="bubble">${html}</div>`;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+
+/* ============ speech out ============ */
+function loadVoices(){
+  if(!("speechSynthesis" in window))return;
+  voices=speechSynthesis.getVoices();
+  const sel=$("voiceSel");
+  sel.innerHTML=voices.map((v,i)=>`<option value="${i}">${esc(v.name)} (${v.lang})</option>`).join("");
+  let i=voices.findIndex(v=>v.name===S.voice);
+  if(i<0){i=voices.findIndex(v=>/en-GB/i.test(v.lang)&&/male|daniel|ryan/i.test(v.name));if(i<0)i=voices.findIndex(v=>/^en/i.test(v.lang));if(i<0)i=0}
+  sel.value=i;
+}
+if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=loadVoices;
+function say(text,html){
+  addMsg("bot",html||esc(text));
+  if(S.muted||!("speechSynthesis" in window))return Promise.resolve();
+  return new Promise(res=>{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(String(text).replace(/<[^>]+>/g,""));
+    const v=voices[$("voiceSel").value];if(v)u.voice=v;
+    u.rate=S.rate;u.pitch=.95;
+    let fin=false;
+    const done=()=>{if(fin)return;fin=true;speaking=false;setCls("speaking",false);res();if(active)startRec()};
+    u.onstart=()=>{speaking=true;setCls("speaking",true);try{rec&&rec.abort()}catch(e){}};
+    u.onend=done;u.onerror=done;
+    speechSynthesis.speak(u);
+  });
+}
+
+/* ============ speech in ============ */
+function startRec(){
+  if(!SR||!active||speaking||recRunning)return;
+  try{
+    rec=new SR();rec.lang="en-IN";rec.continuous=false;rec.interimResults=true;
+    rec.onstart=()=>{recRunning=true;setCls("listening",true)};
+    rec.onresult=e=>{
+      let interim="",fin="";
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal)fin+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;
+      }
+      if(interim)setCaption("“"+interim+"”");
+      if(fin.trim()){setCaption("");handle(fin.trim(),false)}
+    };
+    rec.onerror=e=>{
+      const fatal=m=>{active=false;document.body.classList.add("off");setCls("listening",false);micHelp(m)};
+      if(e.error==="not-allowed"||e.error==="service-not-allowed")fatal("Microphone or speech service is blocked.");
+      else if(e.error==="audio-capture")fatal("No working microphone was found.");
+      else if(e.error==="network")fatal("Speech recognition couldn't reach its online service. Check your internet (Chrome sends audio to Google for recognition).");
+    };
+    rec.onend=()=>{recRunning=false;setCls("listening",false);setCaption("");if(active&&!speaking)setTimeout(startRec,300)};
+    rec.start();
+  }catch(e){recRunning=false}
+}
+function micHelp(msg){
+  addMsg("bot",esc(msg)+"<br><small>Fix: click the 🔒 icon left of the address bar → set Microphone to <b>Allow</b> → reload. If you opened the file directly, run <code>python -m http.server 8000</code> in its folder and open <code>http://localhost:8000/jarvis.html</code>.</small>");
+  updateStatus();
+}
+async function toggle(){
+  if(!SR){say("This browser doesn't support speech recognition. Please use Chrome or Edge — you can still type to me.");return}
+  if(!active){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){micHelp("Microphone access needs a secure page (https:// or http://localhost).");return}
+    try{
+      $("statusLine").textContent="Waiting for microphone permission…";
+      const s=await navigator.mediaDevices.getUserMedia({audio:true});
+      s.getTracks().forEach(t=>t.stop());
+    }catch(e){micHelp(e&&e.name==="NotFoundError"?"No microphone was found on this device.":"Microphone access was blocked.");updateStatus();return}
+    active=true;document.body.classList.remove("off");convoUntil=Date.now()+15000;updateStatus();
+    say(`${greet()}. I'm listening.`);
+  }else{
+    active=false;document.body.classList.add("off");setCls("listening",false);setCaption("");
+    try{rec.abort()}catch(e){}
+    if("speechSynthesis" in window)speechSynthesis.cancel();
+    updateStatus();
+  }
+}
+
+/* ============ audio (alarm sound) ============ */
+let audioCtx=null;
+addEventListener("pointerdown",()=>{
+  if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();
+});
+function beep(f=880,dur=.3){
+  if(!audioCtx)return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime;
+  o.type="sine";o.frequency.value=f;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.35,t+.03);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+dur+.05);
+}
+
+/* ============ formatting helpers ============ */
+const fmtHM=(h,m)=>`${h%12||12}:${pad(m)} ${h>=12?"PM":"AM"}`;
+function fmtDur(ms){let s=Math.round(ms/1000);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);s%=60;const p=[];if(h)p.push(h+" hr");if(m)p.push(m+" min");if(s&&!h)p.push(s+" sec");return p.join(" ")||"0 sec"}
+function fmtClock(ms){let s=Math.max(0,Math.ceil(ms/1000));const h=Math.floor(s/3600),m=Math.floor(s%3600/60);s%=60;return h?`${h}:${pad(m)}:${pad(s)}`:`${m}:${pad(s)}`}
+function dayWord(ts,long){
+  const d=new Date(ts),n=new Date(),t=new Date(n);t.setDate(t.getDate()+1);
+  if(d.toDateString()===n.toDateString())return"today";
+  if(d.toDateString()===t.toDateString())return"tomorrow";
+  return d.toLocaleDateString([],{weekday:long?"long":"short"});
+}
+function inWords(ts){const diff=ts-Date.now(),h=Math.floor(diff/36e5),m=Math.floor(diff%36e5/6e4);return diff<6e4?"in under a minute":"in "+(h?h+"h ":"")+m+"m"}
+const DAYN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function repeatText(days){
+  const k=[...days].sort().join("");
+  if(k==="0123456")return"every day";if(k==="12345")return"on weekdays";if(k==="06")return"on weekends";
+  return"every "+[...days].sort().map(d=>DAYN[d]).join(", ");
+}
+const askNotify=()=>{try{if("Notification" in window&&Notification.permission==="default")Notification.requestPermission()}catch(e){}};
+
+/* ============ clock ============ */
+const WORLD=[["New York","America/New_York"],["London","Europe/London"],["Dubai","Asia/Dubai"],["Tokyo","Asia/Tokyo"]];
+const worldFmt=WORLD.map(([n,tz])=>new Intl.DateTimeFormat([],{timeZone:tz,hour:"numeric",minute:"2-digit"}));
+$("world").innerHTML=WORLD.map(([n])=>`<div><b>--</b><span>${n}</span></div>`).join("");
+$("tz").textContent=Intl.DateTimeFormat().resolvedOptions().timeZone.replace("_"," ");
+function tickClock(){
+  const d=new Date();let h=d.getHours();const ap=h>=12?"PM":"AM";h=h%12||12;
+  $("clkTime").textContent=`${h}:${pad(d.getMinutes())}`;$("clkSec").textContent=pad(d.getSeconds());$("clkAp").textContent=ap;
+  $("clkDate").textContent=d.toLocaleDateString([],{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const p=(d-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5;
+  $("dayFill").style.width=(p*100).toFixed(1)+"%";$("dayTxt").textContent=`${Math.round(p*100)}% of today has passed`;
+  document.querySelectorAll("#world b").forEach((b,i)=>b.textContent=worldFmt[i].format(d));
+  const now=d.getTime();
+  checkAlarms(now);checkTimers(now);updateTimerDisplays(now);
+  if(d.getSeconds()===0)renderAlarms();
+}
+
+/* ============ alarms ============ */
+function nextFor(a,from=new Date()){
+  for(let i=0;i<8;i++){
+    const d=new Date(from);d.setDate(d.getDate()+i);d.setHours(a.h,a.m,0,0);
+    if(a.days.includes(d.getDay())&&d>from)return d.getTime();
+  }
+}
+function resolveTime(h,m,ap,{dayOffset=null,weekday=null}={}){
+  const now=new Date();let hs;
+  if(ap==="am")hs=[h%12];else if(ap==="pm")hs=[h%12+12];else if(h===0||h>12)hs=[h];else hs=[h%12,h%12+12];
+  if((dayOffset!==null||weekday!==null)&&hs.length>1)hs=[(h>=1&&h<=4)||h===12?h%12+12:h%12];
+  let best=null;
+  for(const hh of hs){
+    for(let i=0;i<9;i++){
+      const d=new Date(now);d.setDate(d.getDate()+i);d.setHours(hh,m,0,0);
+      if(dayOffset!==null&&i!==dayOffset)continue;
+      if(weekday!==null&&d.getDay()!==weekday)continue;
+      if(d>now){if(!best||d<best)best=d;break}
+    }
+  }
+  return best;
+}
+function createAlarm({h,m,ap=null,label="",days=[],dayOffset=null,weekday=null,at=null}){
+  const d=at?new Date(at):resolveTime(h,m,ap,{dayOffset,weekday});
+  const a={id:uid(),h:d.getHours(),m:d.getMinutes(),label,days,on:true,next:0};
+  a.next=days.length?nextFor(a):d.getTime();
+  alarms.push(a);saveA();renderAlarms();return a;
+}
+function describeAlarm(a){return `${fmtHM(a.h,a.m)} ${a.days.length?repeatText(a.days):dayWord(a.next,true)}`}
+function checkAlarms(now){
+  let ch=false;
+  for(const a of alarms){
+    if(!a.on||now<a.next)continue;
+    ch=true;
+    if(now-a.next<=90e3)ring({kind:"alarm",label:a.label||"Alarm",time:fmtHM(a.h,a.m)});
+    if(a.days.length)a.next=nextFor(a);else a.on=false;
+  }
+  if(ch){saveA();renderAlarms()}
+}
+function renderAlarms(){
+  const list=[...alarms].sort((a,b)=>(a.h*60+a.m)-(b.h*60+b.m));
+  $("alCount").textContent=alarms.filter(a=>a.on).length;
+  $("alarmList").innerHTML=list.length?list.map(a=>{
+    const [t,ap]=fmtHM(a.h,a.m).split(" ");
+    const sub=a.days.length?repeatText(a.days):dayWord(a.next,false);
+    return `<div class="item ${a.on?"":"dim"}"><div class="big">${t}<small>${ap}</small></div>
+      <div class="meta"><b>${esc(a.label||"Alarm")}</b><span>${esc(sub[0].toUpperCase()+sub.slice(1))}${a.on&&!a.days.length||a.on&&a.days.length?" · "+inWords(a.next):""}</span></div>
+      <label class="sw"><input type="checkbox" data-tog="${a.id}" ${a.on?"checked":""}><u></u></label>
+      <button class="x" data-del="${a.id}" title="Delete" aria-label="Delete alarm">×</button></div>`}).join(""):`<div class="none">No alarms yet ⏰</div>`;
+}
+$("alarmList").addEventListener("click",e=>{const id=e.target.dataset.del;if(id){alarms=alarms.filter(a=>a.id!==id);saveA();renderAlarms()}});
+$("alarmList").addEventListener("change",e=>{
+  const id=e.target.dataset.tog;if(!id)return;
+  const a=alarms.find(x=>x.id===id);if(!a)return;
+  a.on=e.target.checked;
+  if(a.on){a.next=a.days.length?nextFor(a):resolveTime(a.h,a.m,a.h>12||a.h===0?null:(a.h>=12?"pm":"am")).getTime()}
+  saveA();renderAlarms();
+});
+const addDays=new Set();
+$("alDays").innerHTML=DAYN.map((d,i)=>`<button type="button" data-d="${i}" title="${d}">${d[0]}</button>`).join("");
+$("alDays").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const d=+b.dataset.d;addDays.has(d)?addDays.delete(d):addDays.add(d);b.classList.toggle("on")});
+$("alarmForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const [h,m]=$("alTime").value.split(":").map(Number);
+  const a=createAlarm({h,m,ap:h>12||h===0?null:(h>=12?"pm":"am"),label:$("alLabel").value.trim(),days:[...addDays]});
+  askNotify();$("alLabel").value="";
+  addMsg("bot",`Alarm set for <b>${esc(describeAlarm(a))}</b>.`);
+});
+
+/* ============ timers ============ */
+function addTimer(ms,label){const t={id:uid(),label:label||"",end:Date.now()+ms,total:ms};timers.push(t);saveT();renderTimers();return t}
+function checkTimers(now){
+  const done=timers.filter(t=>now>=t.end);
+  if(!done.length)return;
+  timers=timers.filter(t=>now<t.end);saveT();renderTimers();
+  done.forEach(t=>ring({kind:"timer",label:t.label||fmtDur(t.total)+" timer",time:"Time's up"}));
+}
+function renderTimers(){
+  $("tmCount").textContent=timers.length;
+  $("timerList").innerHTML=timers.length?timers.map(t=>`<div class="item" data-id="${t.id}"><div class="big"><span class="tl">--</span></div>
+    <div class="meta"><b>${esc(t.label||fmtDur(t.total)+" timer")}</b><span>${fmtDur(t.total)} total</span><div class="bar"><i></i></div></div>
+    <button class="x" data-cancel="${t.id}" title="Cancel" aria-label="Cancel timer">×</button></div>`).join(""):`<div class="none">No running timers ⏱️</div>`;
+  updateTimerDisplays(Date.now());
+}
+function updateTimerDisplays(now){
+  document.querySelectorAll("#timerList .item[data-id]").forEach(el=>{
+    const t=timers.find(x=>x.id===el.dataset.id);if(!t)return;
+    el.querySelector(".tl").textContent=fmtClock(t.end-now);
+    el.querySelector(".bar i").style.width=Math.max(0,(t.end-now)/t.total*100)+"%";
+  });
+}
+$("timerList").addEventListener("click",e=>{const id=e.target.dataset.cancel;if(id){timers=timers.filter(t=>t.id!==id);saveT();renderTimers()}});
+$("presets").innerHTML=[1,5,10,15,30,60].map(m=>`<button type="button" class="chip" data-m="${m}">${m>=60?"1 hr":m+" min"}</button>`).join("");
+$("presets").addEventListener("click",e=>{const m=e.target.dataset.m;if(m){addTimer(m*6e4);askNotify()}});
+$("timerForm").addEventListener("submit",e=>{e.preventDefault();const m=parseFloat($("tmMin").value);if(m>0){addTimer(m*6e4,$("tmLabel").value.trim());$("tmMin").value="";$("tmLabel").value="";askNotify()}});
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  $("p-alarms").hidden=b.dataset.tab!=="alarms";$("p-timers").hidden=b.dataset.tab!=="timers";
+});
+
+/* ============ ringing ============ */
+let ringQ=[],ringing=null,beepIv=null,ringTO=null;
+function ring(item){ringQ.push(item);if(!ringing)nextRing()}
+function nextRing(){
+  clearInterval(beepIv);clearTimeout(ringTO);
+  ringing=ringQ.shift()||null;
+  $("ringOv").hidden=!ringing;
+  if(!ringing)return;
+  $("ringTitle").textContent=ringing.time;$("ringSub").textContent=ringing.label;
+  $("snoozeBtn").style.display="";
+  const pat=()=>{beep(880);setTimeout(()=>beep(880),380);setTimeout(()=>beep(1100),760)};
+  pat();beepIv=setInterval(pat,2000);
+  ringTO=setTimeout(dismissRing,120000);
+  try{if("Notification" in window&&Notification.permission==="granted")new Notification("Jarvis — "+ringing.label,{body:ringing.time})}catch(e){}
+  if(!S.muted&&"speechSynthesis" in window){const u=new SpeechSynthesisUtterance(ringing.kind==="alarm"?`Alarm. ${ringing.label==="Alarm"?"":ringing.label}`:`Timer done. ${ringing.label}`);speechSynthesis.speak(u)}
+}
+function dismissRing(){nextRing()}
+function snoozeRing(){
+  if(!ringing)return;
+  const l=ringing.label.replace(/ \(snoozed\)$/,"");
+  if(ringing.kind==="alarm")createAlarm({at:Date.now()+300e3,label:l+" (snoozed)"});else addTimer(300e3,l+" (snoozed)");
+  addMsg("bot","Snoozed for 5 minutes.");nextRing();
+}
+$("stopBtn").onclick=dismissRing;$("snoozeBtn").onclick=snoozeRing;
+
+/* ============ weather ============ */
+function wxInfo(c,day=true){
+  if(c===0)return day?["☀️","Clear"]:["🌙","Clear"];if(c<=2)return[day?"🌤️":"☁️","Partly cloudy"];if(c===3)return["☁️","Overcast"];
+  if(c<=48)return["🌫️","Foggy"];if(c<=57)return["🌦️","Drizzle"];if(c<=67)return["🌧️","Rain"];if(c<=77)return["🌨️","Snow"];
+  if(c<=82)return["🌦️","Rain showers"];if(c<=86)return["🌨️","Snow showers"];return["⛈️","Thunderstorm"];
+}
+const T=c=>S.units==="F"?Math.round(c*9/5+32):Math.round(c);
+const TU=()=>"°"+S.units;
+const aqiLabel=v=>v==null?"—":v<=50?"Good":v<=100?"Moderate":v<=150?"Sensitive":v<=200?"Unhealthy":v<=300?"Very bad":"Hazardous";
+const hmFromIso=iso=>{const [h,m]=iso.slice(11,16).split(":").map(Number);return fmtHM(h,m)};
+async function geocode(q){
+  const g=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1`).then(r=>r.json());
+  return g.results?g.results[0]:null;
+}
+async function getWeather(lat,lon){
+  const f=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=4`).then(r=>r.json());
+  let aqi=null;
+  try{const a=await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi`).then(r=>r.json());aqi=a.current?a.current.us_aqi:null}catch(e){}
+  return{f,aqi};
+}
+let WXC=null;
+async function loadWeather(){
+  const body=$("wxBody");
+  if(!S.city){
+    body.innerHTML=`<div class="empty"><p>Set your city to see live weather.</p><div class="inline"><input id="wxIn" placeholder="e.g. Mumbai"><button class="btn" id="wxSet">Set</button></div><p style="margin:10px 0 0"><button class="link" id="wxGeo">📍 Use my location</button></p></div>`;
+    $("wxSet").onclick=()=>setCity($("wxIn").value);$("wxIn").onkeydown=e=>{if(e.key==="Enter")setCity($("wxIn").value)};$("wxGeo").onclick=useMyLocation;
+    return;
+  }
+  try{
+    const w=await getWeather(S.city.lat,S.city.lon);WXC=w;
+    const c=w.f.current,d=w.f.daily,[ic,desc]=wxInfo(c.weather_code,c.is_day);
+    const fc=[1,2,3].map(i=>{const [e]=wxInfo(d.weather_code[i]);return `<div><div class="d">${new Date(d.time[i]+"T12:00").toLocaleDateString([],{weekday:"short"})}</div><div class="e">${e}</div><div class="t">${T(d.temperature_2m_max[i])}° <em>${T(d.temperature_2m_min[i])}°</em></div></div>`}).join("");
+    body.innerHTML=`<div class="wxTop"><div class="wxIcon">${ic}</div><div><div class="wxTemp">${T(c.temperature_2m)}${TU()}</div><div class="wxDesc">${desc} · feels ${T(c.apparent_temperature)}°</div><div class="tiny">${esc(S.city.name)}</div></div></div>
+      <div class="facts"><div class="fact"><b>${c.relative_humidity_2m}%</b><span>Humidity</span></div><div class="fact"><b>${Math.round(c.wind_speed_10m)}</b><span>Wind km/h</span></div><div class="fact"><b>${d.precipitation_probability_max[0]??0}%</b><span>Rain today</span></div><div class="fact"><b>${w.aqi??"—"}</b><span>AQI · ${aqiLabel(w.aqi)}</span></div></div>
+      <div class="fc">${fc}</div>
+      <div class="tiny" style="margin-top:10px;text-align:center">🌅 ${hmFromIso(d.sunrise[0])} &nbsp;·&nbsp; 🌇 ${hmFromIso(d.sunset[0])}</div>`;
+    $("wxUpd").textContent="Updated "+fmtHM(new Date().getHours(),new Date().getMinutes());
+  }catch(e){body.innerHTML=`<div class="none">Couldn't load weather. Check your connection.</div>`}
+}
+async function setCity(q){
+  q=(q||"").trim();if(!q)return false;
+  try{const g=await geocode(q);if(!g){addMsg("bot","I couldn't find a place called “"+esc(q)+"”.");return false}
+    S.city={name:g.name+(g.admin1?", "+g.admin1:""),lat:g.latitude,lon:g.longitude};saveS();loadWeather();return g}
+  catch(e){addMsg("bot","I couldn't look that up right now.");return false}
+}
+function geoPos(){return new Promise((ok,no)=>navigator.geolocation?navigator.geolocation.getCurrentPosition(ok,no,{timeout:10000,maximumAge:600000}):no(new Error("unsupported")))}
+async function useMyLocation(){
+  try{
+    const p=await geoPos();const lat=p.coords.latitude,lon=p.coords.longitude;let name="Your location";
+    try{const r=await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`).then(r=>r.json());name=r.city||r.locality||r.principalSubdivision||name}catch(e){}
+    S.city={name,lat,lon};saveS();loadWeather();return true;
+  }catch(e){addMsg("bot","I couldn't get your location. You can type a city in the weather card instead.");return false}
+}
+$("wxRefresh").onclick=loadWeather;
+
+/* ============ markets ============ */
+let MK=null;
+const CUR={dollar:"USD",usd:"USD",rupee:"INR",inr:"INR",euro:"EUR",eur:"EUR",pound:"GBP",gbp:"GBP",yen:"JPY",jpy:"JPY",dirham:"AED",aed:"AED",yuan:"CNY",cny:"CNY",franc:"CHF",chf:"CHF"};
+const curCode=w=>{w=(w||"").trim().replace(/^us /,"").replace(/s$/,"");return CUR[w]||(/^[a-z]{3}$/.test(w)?w.toUpperCase():null)};
+async function loadMarkets(){
+  const [c,x]=await Promise.allSettled([
+    fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,inr&include_24hr_change=true").then(r=>r.json()),
+    fetch("https://open.er-api.com/v6/latest/USD").then(r=>r.json())]);
+  MK={c:c.status==="fulfilled"&&c.value.bitcoin?c.value:null,r:x.status==="fulfilled"&&x.value.rates?x.value.rates:null};
+  const b=$("mkBody");
+  if(!MK.c&&!MK.r){b.innerHTML=`<div class="none">Couldn't load market data right now.</div>`;return}
+  const fx=(from,sym)=>MK.r&&MK.r[from]?`<div class="mrow"><div><b>${from} → INR</b></div><div class="v">₹${(MK.r.INR/MK.r[from]).toFixed(2)}</div></div>`:"";
+  const coin=(id,name)=>{const k=MK.c&&MK.c[id];if(!k)return"";const ch=k.usd_24h_change||0;return `<div class="mrow"><div><b>${name}</b><small>₹${Math.round(k.inr).toLocaleString("en-IN")}</small></div><div class="v">$${k.usd.toLocaleString("en-US")}<small class="${ch>=0?"up":"dn"}">${ch>=0?"▲":"▼"} ${Math.abs(ch).toFixed(2)}% 24h</small></div></div>`};
+  b.innerHTML=coin("bitcoin","Bitcoin")+coin("ethereum","Ethereum")+fx("USD")+fx("EUR")+fx("GBP")+fx("AED");
+  const n=new Date();$("mkUpd").textContent="Updated "+fmtHM(n.getHours(),n.getMinutes());
+}
+$("mkRefresh").onclick=loadMarkets;
+
+/* ============ status pills ============ */
+function netPill(){const on=navigator.onLine;$("pillNet").classList.toggle("off",!on);$("pillNet").lastElementChild.textContent=on?"Online":"Offline"}
+addEventListener("online",()=>{netPill();loadWeather();loadMarkets()});addEventListener("offline",netPill);
+if(navigator.getBattery)navigator.getBattery().then(b=>{
+  const up=()=>{$("pillBat").hidden=false;$("batTxt").textContent=Math.round(b.level*100)+"%"+(b.charging?" ⚡":"")};
+  up();b.addEventListener("levelchange",up);b.addEventListener("chargingchange",up);window._bat=b;
+}).catch(()=>{});
+
+/* ============ parsing helpers ============ */
+function parseDuration(t){
+  if(/half an hour/.test(t))return 1800e3;
+  if(/an hour and a half/.test(t))return 5400e3;
+  let ms=0,found=false,m;const re=/(\d+(?:\.\d+)?|an?|one)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)\b/g;
+  while((m=re.exec(t))){found=true;const n=/^\d/.test(m[1])?parseFloat(m[1]):1;const u=m[2][0];ms+=n*(u==="h"?3600:u==="m"?60:1)*1000}
+  return found?ms:0;
+}
+function parseClock(t){
+  t=t.replace(/\b([ap])\s?m\b/g,"$1m");
+  if(/\bnoon\b/.test(t))return{h:12,m:0,ap:"pm"};
+  if(/\bmidnight\b/.test(t))return{h:12,m:0,ap:"am"};
+  let h,mi=0,ap=null,m;
+  if((m=t.match(/\b(\d{1,2})\s*[:.]\s*(\d{2})\s*(am|pm)?/))||(m=t.match(/\b(\d{1,2})(\d{2})\s*(am|pm)\b/))||(m=t.match(/\b(\d{1,2})\s(\d{2})\s*(am|pm)?\b/))){h=+m[1];mi=+m[2];ap=m[3]||null}
+  else if((m=t.match(/\b(\d{1,2})\s*(am|pm)\b/))){h=+m[1];ap=m[2]}
+  else if((m=t.match(/\b(?:at|for|to)\s+(\d{1,2})\b(?!\s*(?:minute|min|hour|hr|second|sec|day))/))){h=+m[1]}
+  else return null;
+  if(h>23||mi>59)return null;if(h>12)ap=null;if(ap&&h===0)return null;
+  return{h,m:mi,ap};
+}
+const WD=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+function parseDays(t){
+  if(/\b(every ?day|daily|each day)\b/.test(t))return{days:[0,1,2,3,4,5,6]};
+  if(/\bweekdays?\b/.test(t))return{days:[1,2,3,4,5]};
+  if(/\bweekends?\b/.test(t))return{days:[0,6]};
+  const found=[...t.matchAll(/\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)s?\b/g)].map(m=>WD.indexOf(m[1]));
+  if(/\bevery\b/.test(t)&&found.length)return{days:[...new Set(found)]};
+  if(found.length)return{days:[],weekday:found[0]};
+  if(/\btomorrow\b/.test(t))return{days:[],dayOffset:1};
+  if(/\bday after tomorrow\b/.test(t))return{days:[],dayOffset:2};
+  return{days:[]};
+}
+const labelOf=t=>((t.match(/\b(?:called|named|labell?ed|titled)\s+(.+?)(?=\s+(?:at|for|in|every|tomorrow|on)\b|$)/)||[])[1]||"");
+
+/* ============ commands ============ */
+const jokes=["Why do programmers prefer dark mode? Because light attracts bugs.","I would tell you a UDP joke, but you might not get it.","There are 10 kinds of people: those who understand binary and those who don't.","Why did the developer go broke? He used up all his cache.","A SQL query walks into a bar, walks up to two tables and asks: can I join you?"];
+const sites={youtube:"https://www.youtube.com",google:"https://www.google.com",gmail:"https://mail.google.com",github:"https://github.com",whatsapp:"https://web.whatsapp.com",instagram:"https://www.instagram.com",twitter:"https://x.com",facebook:"https://www.facebook.com",linkedin:"https://www.linkedin.com",maps:"https://maps.google.com",spotify:"https://open.spotify.com",netflix:"https://www.netflix.com",amazon:"https://www.amazon.in",chatgpt:"https://chatgpt.com",claude:"https://claude.ai"};
+function openUrl(url,name){
+  const w=window.open(url,"_blank");
+  if(!w)return say(`Opening ${name}. Your browser blocked the popup, so here's the link.`,`Opening ${esc(name)} — popup blocked, <a href="${url}" target="_blank">click here</a>.`);
+  return say(`Opening ${name}.`);
+}
+function composeLink(url,label,spoken){
+  if(url.startsWith("http"))window.open(url,"_blank");else location.href=url;
+  return say(spoken,`${esc(spoken)} <a href="${url}" target="_blank">${label}</a>`);
+}
+const normPhone=s=>{let d=(s||"").replace(/\D/g,"");if(d.length===10)d="91"+d;return d};
+const RE_CITY=/\b(?:in|at|for|of)\s+([a-z][a-z .'-]*?)(?:\s+(?:today|tomorrow|now|tonight|right now|this week|this weekend))?$/;
+
+async function handle(raw,typed){
+  raw=raw.trim();if(!raw)return;
+  let t=raw.toLowerCase().replace(/\b([ap])\.\s?m\.?/g,"$1m").replace(/[?!,]/g,"").replace(/\.(?=\s|$)/g,"").replace(/\s+/g," ").trim();
+  if(!ringing&&S.wake&&!typed){
+    const now=Date.now();
+    if(/\bjarvis\b/.test(t))convoUntil=now+12000;
+    else if(now>convoUntil){setCaption("Say “Jarvis” first…");setTimeout(()=>setCaption(""),2000);return}
+    else convoUntil=now+12000;
+  }
+  addMsg("user",esc(raw));
+  if(ringing){if(/snooze|later|more/.test(t))snoozeRing();else{dismissRing();addMsg("bot","Dismissed.")}return}
+  t=t.replace(/\b(hey |hi |ok |okay )?jarvis\b/g,"").replace(/^(please|can you|could you|would you)\s+/,"").trim();
+  if(!t)return say("Yes? I'm listening.");
+  setCls("thinking",true);
+  try{
+    if(pending){const p=pending;pending=null;const r=await p(t,raw);if(r!==false){return r}}
+    await route(t,raw);
+  }catch(e){console.error(e);await say("Something went wrong with that one. Could you try again?")}
+  finally{setCls("thinking",false)}
+}
+
+async function route(t,raw){
+  const r=raw.replace(/[.!?]+$/,"").replace(/^\s*(?:hey |hi |ok |okay )?jarvis[, ]*/i,"").trim();
+
+  /* --- power / speech control --- */
+  if(/\b(stop listening|shut down|power down|goodbye|bye|turn off the mic)\b/.test(t)){await say("Powering down. Talk soon.");if(active)toggle();return}
+  if(/^(stop|quiet|be quiet|shut up|stop talking)$/.test(t)){speechSynthesis.cancel();return}
+
+  /* --- personal --- */
+  let m=t.match(/\b(?:my name is|call me|i am called)\s+([a-z ]+)$/);
+  if(m){S.name=m[1].trim().replace(/\b\w/g,c=>c.toUpperCase());saveS();$("greet").textContent=greet();return say(`Nice to meet you, ${S.name}. I'll remember that.`)}
+
+  /* --- alarms --- */
+  if(/\balarms?\b|\bwake me\b/.test(t)){
+    if(/\b(delete|cancel|remove|clear|turn off|stop)\b/.test(t)){
+      if(!alarms.length)return say("You don't have any alarms.");
+      if(/\ball\b/.test(t)||/clear/.test(t)){const n=alarms.length;alarms=[];saveA();renderAlarms();return say(`Deleted all ${n} alarm${n>1?"s":""}.`)}
+      const c=parseClock(t);
+      if(c){const before=alarms.length;alarms=alarms.filter(a=>!(a.h%12===c.h%12&&a.m===c.m&&(!c.ap||(a.h>=12)===(c.ap==="pm"))));saveA();renderAlarms();return say(before>alarms.length?`Deleted the ${fmtHM(c.ap==="pm"&&c.h<12?c.h+12:c.ap==="am"&&c.h===12?0:c.h,c.m)} alarm.`:"I couldn't find an alarm at that time.")}
+      if(alarms.length===1){const a=alarms[0];alarms=[];saveA();renderAlarms();return say(`Deleted your ${fmtHM(a.h,a.m)} alarm.`)}
+      pending=async tt=>{if(!parseClock(tt))return false;return route("delete alarm "+tt,tt)};
+      return say("Which alarm? Tell me its time, or say delete all alarms.");
+    }
+    if(/\b(list|show|what|which|how many|any|when|tell)\b/.test(t)&&!/\b(set|create|add|make)\b/.test(t)){
+      const on=alarms.filter(a=>a.on).sort((a,b)=>a.next-b.next);
+      if(!on.length)return say("You have no active alarms.");
+      return say(`You have ${on.length} alarm${on.length>1?"s":""}: ${on.map(describeAlarm).join("; ")}.`);
+    }
+    return cmdAlarm(t);
+  }
+
+  /* --- reminders & timers --- */
+  m=t.match(/^remind me (?:in|after) (.+?) (?:to|about|that) (.+)$/);
+  if(m){const ms=parseDuration(m[1]);if(ms){addTimer(ms,"Reminder: "+m[2]);askNotify();return say(`Okay, I'll remind you to ${m[2]} in ${fmtDur(ms)}.`)}}
+  m=t.match(/^remind me (?:to |about |that )?(.+?) (?:in|after) (.+)$/);
+  if(m){const ms=parseDuration(m[2]);if(ms){addTimer(ms,"Reminder: "+m[1]);askNotify();return say(`Okay, I'll remind you to ${m[1]} in ${fmtDur(ms)}.`)}}
+  m=t.match(/^remind me (?:to |about |that )?(.+?) at (.+)$/);
+  if(m){
+    const c=parseClock("at "+m[2]);
+    if(c){const dd=parseDays(t);const a=createAlarm({h:c.h,m:c.m,ap:c.ap,label:"Reminder: "+m[1],...dd});askNotify();return say(`Done. I'll remind you to ${m[1]} at ${describeAlarm(a)}.`)}
+  }
+  if(/\btimers?\b/.test(t)||/\bstopwatch\b/.test(t)){
+    if(/\b(cancel|stop|delete|clear|remove)\b/.test(t)){const n=timers.length;timers=[];saveT();renderTimers();return say(n?`Cancelled ${n} timer${n>1?"s":""}.`:"No timers are running.")}
+    if(/\b(list|show|how much|how long|what|any|left|remaining)\b/.test(t)&&!/\bset\b/.test(t)){
+      if(!timers.length)return say("No timers are running.");
+      return say(timers.map(x=>`${x.label||fmtDur(x.total)+" timer"}: ${fmtDur(x.end-Date.now())} left`).join(". ")+".");
+    }
+    const ms=parseDuration(t);
+    if(ms){addTimer(ms,labelOf(t));askNotify();return say(`Timer set for ${fmtDur(ms)}.`)}
+    pending=async tt=>{const d=parseDuration(tt);if(!d)return false;addTimer(d);return say(`Timer set for ${fmtDur(d)}.`)};
+    return say("For how long?");
+  }
+
+  /* --- cricket --- */
+  if(/\b(cricket|ipl|t20|t 20|odi|test match|live score|match score|who is winning|who won the match)\b/.test(t))return cmdCricket(t,false);
+
+  /* --- time & date --- */
+  m=t.match(/\btime\b.*\bin\s+([a-z .'-]+)$/);
+  if(m){
+    const g=await geocode(m[1].replace(/^the /,""));
+    if(!g)return say(`I couldn't find ${m[1]}.`);
+    const s=new Date().toLocaleString([],{timeZone:g.timezone,weekday:"long",hour:"numeric",minute:"2-digit"});
+    return say(`It's ${s} in ${g.name}.`);
+  }
+  if(/\btime\b/.test(t)&&!/\b(timer|timetable)\b/.test(t))return say("It's "+new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})+".");
+  if(/\b(date|what day|which day|today)\b/.test(t)&&!/weather|rain|forecast/.test(t))return say("Today is "+new Date().toLocaleDateString([],{weekday:"long",day:"numeric",month:"long",year:"numeric"})+".");
+
+  /* --- weather --- */
+  if(/\b(weather|temperature|forecast|rain|raining|umbrella|humid|humidity|air quality|aqi|sunrise|sunset|how hot|how cold|windy)\b/.test(t))return cmdWeather(t);
+
+  /* --- markets --- */
+  if(/\b(bitcoin|btc|ethereum|ether|eth|crypto)\b/.test(t)){
+    if(!MK||!MK.c)await loadMarkets();
+    if(!MK||!MK.c)return say("I couldn't fetch crypto prices right now.");
+    const parts=[];
+    if(!/\b(ethereum|ether|eth)\b/.test(t)||/\b(bitcoin|btc|crypto)\b/.test(t))parts.push(`Bitcoin is $${Math.round(MK.c.bitcoin.usd).toLocaleString("en-US")}, about ₹${Math.round(MK.c.bitcoin.inr).toLocaleString("en-IN")}, ${MK.c.bitcoin.usd_24h_change>=0?"up":"down"} ${Math.abs(MK.c.bitcoin.usd_24h_change).toFixed(1)} percent in 24 hours`);
+    if(/\b(ethereum|ether|eth|crypto)\b/.test(t))parts.push(`Ethereum is $${Math.round(MK.c.ethereum.usd).toLocaleString("en-US")}, ${MK.c.ethereum.usd_24h_change>=0?"up":"down"} ${Math.abs(MK.c.ethereum.usd_24h_change).toFixed(1)} percent`);
+    return say(parts.join(". ")+".");
+  }
+  if(/\b(convert|exchange rate|currency|dollars?|rupees?|euros?|pounds?|yen|dirhams?|usd|inr|eur|gbp|aed)\b/.test(t)){
+    if(!MK||!MK.r)await loadMarkets();
+    if(!MK||!MK.r)return say("I couldn't fetch exchange rates right now.");
+    let amt=1,from,to;
+    m=t.match(/(\d+(?:\.\d+)?)\s*([a-z]+(?: [a-z]+)?)\s+(?:to|in|into)\s+([a-z]+(?: [a-z]+)?)$/);
+    if(m){amt=parseFloat(m[1]);from=curCode(m[2]);to=curCode(m[3])}
+    if(!from||!to){m=t.match(/([a-z]+(?: [a-z]+)?)\s+(?:to|in|into)\s+([a-z]+(?: [a-z]+)?)$/);if(m){from=curCode(m[1].replace(/^(the|what is|rate)\s+/,""));to=curCode(m[2])}}
+    if(!from||!to){from="USD";to="INR"}
+    if(!MK.r[from]||!MK.r[to])return say("I don't have a rate for that currency pair.");
+    const v=amt*MK.r[to]/MK.r[from];
+    return say(`${amt} ${from} is about ${v.toLocaleString("en-US",{maximumFractionDigits:2})} ${to}.`);
+  }
+
+  /* --- system --- */
+  if(/\bbattery\b/.test(t)){const b=window._bat||(navigator.getBattery?await navigator.getBattery():null);return say(b?`Battery is at ${Math.round(b.level*100)} percent${b.charging?" and charging":""}.`:"I can't read the battery in this browser.")}
+  if(/\b(internet|online|connection|network)\b/.test(t)){const c=navigator.connection;return say(navigator.onLine?`You're online${c&&c.effectiveType?`, on a ${c.effectiveType} connection`:""}.`:"You appear to be offline.")}
+
+  /* --- small talk --- */
+  if(/\b(who are you|your name|what are you|what can you do|help)\b/.test(t))return say("I'm Jarvis, your voice assistant. I give live time, weather, air quality and market prices, set alarms, timers and reminders, send messages, do maths and look things up.");
+  if(/\bhow are you\b/.test(t))return say("All systems running smoothly. How are you?");
+  if(/^(hello|hi|hey|good (morning|afternoon|evening))$/.test(t))return say(greet()+"! What can I do for you?");
+  if(/\bthank/.test(t))return say("Anytime.");
+  if(/\bjoke\b/.test(t))return say(jokes[Math.floor(Math.random()*jokes.length)]);
+  if(/\b(flip|toss) a coin\b/.test(t))return say(Math.random()<.5?"Heads.":"Tails.");
+  if(/\broll (a )?(dice|die)\b/.test(t))return say("You rolled a "+(1+Math.floor(Math.random()*6))+".");
+
+  /* --- contacts & messages --- */
+  m=r.match(/^(?:add|save) contact\s+(.+?)\s+(?:number|phone|mobile)\s+([\d\s+-]+)$/i);
+  if(m){const k=m[1].toLowerCase();book[k]=Object.assign(book[k]||{},{phone:normPhone(m[2])});saveB();renderContacts();return say(`Saved ${m[1]}'s number.`)}
+  m=r.match(/^(?:add|save) contact\s+(.+?)\s+email\s+(.+)$/i);
+  if(m){const k=m[1].toLowerCase();book[k]=Object.assign(book[k]||{},{email:m[2].replace(/\s+at\s+/gi,"@").replace(/\s+dot\s+/gi,".").replace(/\s/g,"")});saveB();renderContacts();return say(`Saved ${m[1]}'s email.`)}
+  const sm=r.match(/^(send|text|whatsapp|message|msg|email|mail)\b\s*(.*?)\s*\b(?:saying|say|that says|with message)\s+(.+)$/i);
+  if(sm){
+    const verb=sm[1].toLowerCase(),head=sm[2],body=sm[3].trim();
+    const kind=/email|mail/i.test(verb+" "+head)?"email":/\b(text|sms)\b/i.test(verb+" "+head)?"sms":"whatsapp";
+    const name=head.replace(/^(an?\s+)?(whatsapp\s+|text\s+|sms\s+|email\s+|mail\s+)?(message\s+|msg\s+)?(to\s+|for\s+)?/i,"").trim();
+    if(!name)return say("Who should I send it to? Say: send message to Rahul saying hello.");
+    const c=book[name.toLowerCase()]||{},digits=name.replace(/\D/g,""),phone=c.phone||(digits.length>=10?normPhone(digits):"");
+    if(kind==="email"){const url=`mailto:${c.email||""}?subject=${encodeURIComponent("Message from Jarvis")}&body=${encodeURIComponent(body)}`;return composeLink(url,"Open email",c.email?`Drafting an email to ${name}. Press send in your mail app.`:`I don't have an email for ${name}, so I opened a blank draft with your message.`)}
+    if(kind==="sms"){const url=`sms:${phone?"+"+phone:""}?body=${encodeURIComponent(body)}`;return composeLink(url,"Open messages",phone?`Text to ${name} is ready. Press send.`:`I don't have a number for ${name}, so pick the contact yourself.`)}
+    const url=`https://wa.me/${phone}?text=${encodeURIComponent(body)}`;
+    return composeLink(url,"Open WhatsApp",phone?`WhatsApp message to ${name} is ready. Press send.`:`I don't have a number for ${name}, so pick the contact in WhatsApp. Save one in Settings or say: add contact ${name} number, then the digits.`);
+  }
+  if(/^(send|text|whatsapp|email|mail|message)\b.*\bto\s+\S+/i.test(r))return say("What should the message say? Try: send message to Rahul saying I'll be late.");
+
+  /* --- maths --- */
+  if(/\b(calculate|what is|what's|compute|solve)\b/.test(t)||/^[\d\s+\-*/x().]+$/.test(t)||/\d\s*(plus|minus|times|divided|multiplied|into|over|x)\s*\d/.test(t)){
+    let e=t.replace(/\b(calculate|what is|what's|compute|solve|equals?)\b/g,"").replace(/multiplied by|times|into|\bx\b/g,"*").replace(/divided by|\bover\b/g,"/").replace(/\bplus\b/g,"+").replace(/\bminus\b/g,"-").replace(/to the power of/g,"**").replace(/(\d+(?:\.\d+)?)\s*percent of\s*(\d+(?:\.\d+)?)/,"($1/100)*$2").replace(/\bsquared\b/g,"**2").replace(/\bcubed\b/g,"**3").trim();
+    if(/^[\d\s+\-*/().%]+$/.test(e)&&/\d/.test(e)&&/[+\-*/%]/.test(e)){
+      try{const v=Function(`"use strict";return(${e})`)();if(isFinite(v))return say(`${e} equals ${Math.round(v*1e6)/1e6}.`)}catch(err){}
+    }
+  }
+
+  /* --- web --- */
+  m=t.match(/^(?:play|put on)\s+(.+?)(?:\s+on youtube)?$/);
+  if(m)return openUrl("https://www.youtube.com/results?search_query="+encodeURIComponent(m[1]),"YouTube results for "+m[1]);
+  m=t.match(/^(?:open|launch|go to|start)\s+(.+)$/);
+  if(m){
+    const k=m[1].replace(/\s+/g,"").replace(/\.com$/,"");
+    if(sites[k])return openUrl(sites[k],k);
+    if(/^[a-z0-9-]+\.[a-z.]{2,}$/.test(m[1].replace(/\s+/g,"")))return openUrl("https://"+m[1].replace(/\s+/g,""),m[1]);
+    return openUrl("https://www.google.com/search?q="+encodeURIComponent(m[1]),m[1]);
+  }
+  m=t.match(/^(?:search|google|look up|find)(?:\s+for)?\s+(.+)$/);
+  if(m)return openUrl("https://www.google.com/search?q="+encodeURIComponent(m[1]),"search results for "+m[1]);
+
+  /* --- knowledge fallback (Wikipedia) --- */
+  m=t.match(/^(?:who is|who was|who are|what is|what are|what was|tell me about|define|explain)\s+(?:a |an |the )?(.+)$/)||[null,t];
+  try{
+    const s=await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(m[1])}&format=json&origin=*&srlimit=1`).then(r=>r.json());
+    const hit=s.query.search[0];
+    if(hit){
+      const p=await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/"+encodeURIComponent(hit.title)).then(r=>r.json());
+      if(p.extract){const s2=p.extract.split(/(?<=[.!?])\s+/).slice(0,2).join(" ");return say(s2,`${esc(s2)} <a href="${p.content_urls.desktop.page}" target="_blank">Wikipedia ↗</a>`)}
+    }
+  }catch(e){}
+  return openUrl("https://www.google.com/search?q="+encodeURIComponent(raw),"a web search for that");
+}
+
+/* ============ cricket ============ */
+let CRIC={at:0,data:null};
+async function getCricket(force){
+  if(!S.cricKey)return{err:"nokey"};
+  if(!force&&CRIC.data&&Date.now()-CRIC.at<60000)return{data:CRIC.data};
+  try{
+    const j=await fetch(`https://api.cricapi.com/v1/currentMatches?apikey=${encodeURIComponent(S.cricKey)}&offset=0`).then(r=>r.json());
+    if(j.status!=="success"||!Array.isArray(j.data))return{err:j.reason||"The cricket service returned an error. Check your API key in Settings."};
+    CRIC={at:Date.now(),data:j.data};return{data:j.data};
+  }catch(e){return{err:"I couldn't reach the cricket service. Check your connection."}}
+}
+const cricState=m=>m.matchEnded?2:m.matchStarted?0:1;
+const cricTeam=s=>String(s.inning||"").replace(/\s*Inning\s*\d+/i,"");
+function cricCard(ms){
+  return `<div class="cric">${ms.map(m=>{
+    const st=cricState(m);
+    const badge=st===0?'<span class="live">● LIVE</span>':st===1?'<span class="soon">UPCOMING</span>':'<span class="done">RESULT</span>';
+    const lines=(m.score||[]).map(s=>`<div class="sc"><span>${esc(cricTeam(s))}</span><b>${esc(s.r)}/${esc(s.w)} <small>(${esc(s.o)} ov)</small></b></div>`).join("")||`<div class="sc"><span>${esc((m.teams||[]).join(" vs "))}</span></div>`;
+    return `<div class="cm"><div class="ct">${badge}<span>${esc(m.matchType?String(m.matchType).toUpperCase():"")}</span></div><div class="cn">${esc(m.name||"")}</div>${lines}<div class="cs">${esc(m.status||"")}</div></div>`;
+  }).join("")}<button class="chip" data-cric-refresh type="button" style="align-self:flex-start">↻ Refresh scores</button></div>`;
+}
+async function cmdCricket(t,force){
+  const g=await getCricket(force);
+  if(g.err==="nokey")return say("To show live cricket scores I need a free API key from cricketdata.org. Paste it in Settings under Cricket, then ask me again.",'To show live cricket scores I need a free API key from <a href="https://cricketdata.org" target="_blank">cricketdata.org</a>. Paste it in <button class="chip" data-open-settings type="button">Settings → Cricket</button> then ask me again.');
+  if(g.err)return say(g.err);
+  let ms=g.data.filter(m=>m.name);
+  const teams=[...new Set(ms.flatMap(m=>m.teams||[]))];
+  const asked=teams.filter(x=>x&&t.includes(x.toLowerCase()));
+  if(asked.length)ms=ms.filter(m=>(m.teams||[]).some(x=>asked.includes(x)));
+  else if(/\b(live|now|ongoing|current)\b/.test(t)){const lv=ms.filter(m=>cricState(m)===0);if(lv.length)ms=lv}
+  if(!ms.length)return say(asked.length?`I don't see a current match for ${asked.join(" or ")}.`:"There are no cricket matches listed right now.");
+  ms.sort((a,b)=>cricState(a)-cricState(b)||new Date(b.dateTimeGMT||0)-new Date(a.dateTimeGMT||0));
+  ms=ms.slice(0,4);
+  const spoken=ms.slice(0,2).map(m=>{
+    const sc=(m.score||[]).map(s=>`${cricTeam(s)} ${s.r} for ${s.w}${s.o!=null?` in ${s.o} overs`:""}`).join(", ");
+    return `${m.name}. ${sc?sc+". ":""}${m.status||""}`;
+  }).join(" Next match: ");
+  return say(spoken,cricCard(ms));
+}
+log.addEventListener("click",e=>{
+  if(e.target.closest("[data-open-settings]"))$("settingsBtn").click();
+  if(e.target.closest("[data-cric-refresh]"))cmdCricket("live cricket",true);
+});
+
+async function cmdAlarm(t){
+  const dd=parseDays(t),label=labelOf(t);
+  const tt=label?t.replace(label,""):t;
+  const rel=/\b(?:in|after)\s+\d|\b(?:in|after)\s+(?:an?|half)\b/.test(tt)?parseDuration(tt):0;
+  if(rel){const a=createAlarm({at:Date.now()+rel,label});askNotify();return say(`Alarm set for ${describeAlarm(a)}, that's ${fmtDur(rel)} from now.`)}
+  const c=parseClock(tt);
+  if(!c){pending=async x=>{if(!parseClock(x))return false;return cmdAlarm("set alarm "+x+(label?" called "+label:""))};return say("What time should I set it for?")}
+  const a=createAlarm({h:c.h,m:c.m,ap:c.ap,label,...dd});askNotify();
+  return say(`Alarm set for ${describeAlarm(a)}${label?`, labelled ${label}`:""}.`);
+}
+
+async function cmdWeather(t){
+  let lat,lon,name,w;
+  const city=(t.match(RE_CITY)||[])[1];
+  if(city&&!/^(the|my|a)\b/.test(city)){
+    const g=await geocode(city);if(!g)return say(`I couldn't find ${city}.`);
+    lat=g.latitude;lon=g.longitude;name=g.name;w=await getWeather(lat,lon);
+  }else if(S.city){name=S.city.name.split(",")[0];w=(WXC&&Date.now()>0)?WXC:await getWeather(S.city.lat,S.city.lon)}
+  else{pending=async tt=>cmdWeather("weather in "+tt.replace(/^(in|it's|its)\s+/,""));return say("Which city should I check?")}
+  const c=w.f.current,d=w.f.daily,u=S.units==="F"?"Fahrenheit":"Celsius";
+  if(/\b(aqi|air quality)\b/.test(t))return say(w.aqi!=null?`Air quality in ${name} is ${aqiLabel(w.aqi)}, with an AQI of ${w.aqi}.`:`I couldn't get air quality for ${name}.`);
+  if(/\bsunrise\b/.test(t))return say(`Sunrise in ${name} is at ${hmFromIso(d.sunrise[/tomorrow/.test(t)?1:0])}.`);
+  if(/\bsunset\b/.test(t))return say(`Sunset in ${name} is at ${hmFromIso(d.sunset[/tomorrow/.test(t)?1:0])}.`);
+  if(/\b(rain|raining|umbrella)\b/.test(t)){const i=/tomorrow/.test(t)?1:0;return say(`There's a ${d.precipitation_probability_max[i]??0} percent chance of rain ${i?"tomorrow":"today"} in ${name}.`)}
+  if(/\btomorrow\b/.test(t)){const [,ds]=wxInfo(d.weather_code[1]);return say(`Tomorrow in ${name}: ${ds}, between ${T(d.temperature_2m_min[1])} and ${T(d.temperature_2m_max[1])} degrees ${u}.`)}
+  if(/\b(forecast|week|next days)\b/.test(t))return say(`Forecast for ${name}. `+[1,2,3].map(i=>`${dayWord(d.time[i]+"T12:00",true)==="today"?"":new Date(d.time[i]+"T12:00").toLocaleDateString([],{weekday:"long"})}: ${wxInfo(d.weather_code[i])[1]}, ${T(d.temperature_2m_min[i])} to ${T(d.temperature_2m_max[i])}`).join(". ")+".");
+  const [,ds]=wxInfo(c.weather_code,c.is_day);
+  return say(`In ${name} it's ${T(c.temperature_2m)} degrees ${u} with ${ds.toLowerCase()}, feels like ${T(c.apparent_temperature)}. Humidity ${c.relative_humidity_2m} percent, wind ${Math.round(c.wind_speed_10m)} kilometres per hour.${w.aqi!=null?` Air quality is ${aqiLabel(w.aqi).toLowerCase()}.`:""}`);
+}
+
+/* ============ settings dialog ============ */
+function renderContacts(){
+  const ks=Object.keys(book);
+  $("contactList").innerHTML=ks.length?ks.map(k=>`<div class="crow"><span><b style="text-transform:capitalize">${esc(k)}</b> · ${esc(book[k].phone?"+"+book[k].phone:"")} ${esc(book[k].email||"")}</span><button class="x" data-ck="${esc(k)}">×</button></div>`).join(""):`<div class="tiny">No contacts yet. Saved only in this browser.</div>`;
+}
+$("contactList").addEventListener("click",e=>{const k=e.target.dataset.ck;if(k){delete book[k];saveB();renderContacts()}});
+$("cAdd").onclick=()=>{const n=$("cName").value.trim().toLowerCase();if(!n)return;book[n]=Object.assign(book[n]||{},{});if($("cPhone").value.trim())book[n].phone=normPhone($("cPhone").value);if($("cEmail").value.trim())book[n].email=$("cEmail").value.trim();saveB();renderContacts();["cName","cPhone","cEmail"].forEach(i=>$(i).value="")};
+$("settingsBtn").onclick=()=>{
+  $("setName").value=S.name;$("rate").value=S.rate;$("speakChk").checked=!S.muted;$("wakeChk").checked=S.wake;$("unitSel").value=S.units;$("cityInput").value=S.city?S.city.name:"";
+  $("cricKey").value=S.cricKey||"";renderContacts();$("dlg").showModal();
+};
+$("dlgClose").onclick=()=>$("dlg").close();
+$("cricKey").onchange=e=>{S.cricKey=e.target.value.trim();saveS();CRIC={at:0,data:null}};
+$("setName").onchange=e=>{S.name=e.target.value.trim();saveS();$("greet").textContent=greet()};
+$("voiceSel").onchange=e=>{const v=voices[e.target.value];if(v){S.voice=v.name;saveS()}};
+$("rate").oninput=e=>{S.rate=+e.target.value;saveS()};
+$("speakChk").onchange=e=>{S.muted=!e.target.checked;saveS();if(S.muted&&"speechSynthesis" in window)speechSynthesis.cancel()};
+$("wakeChk").onchange=e=>{S.wake=e.target.checked;saveS();updateStatus()};
+$("unitSel").onchange=e=>{S.units=e.target.value;saveS();loadWeather()};
+$("citySet").onclick=async()=>{const g=await setCity($("cityInput").value);if(g)$("cityInput").value=S.city.name};
+$("cityGeo").onclick=async()=>{if(await useMyLocation())$("cityInput").value=S.city.name};
+
+/* ============ UI wiring ============ */
+$("orbWrap").onclick=toggle;$("micBtn").onclick=toggle;
+$("orbWrap").onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle()}};
+$("form").onsubmit=e=>{e.preventDefault();const v=$("txt").value.trim();if(v){$("txt").value="";handle(v,true)}};
+const SUGGEST=["What's the weather?","Set alarm for 6:30 AM","Wake me up at 7 every weekday","Timer for 10 minutes","Remind me to stretch in 30 minutes","Bitcoin price","Convert 100 USD to INR","Time in Tokyo","Will it rain tomorrow?","Air quality","Live cricket score","India match score","Tell me a joke"];
+$("chips").innerHTML=SUGGEST.map(s=>`<button class="chip" type="button">${esc(s)}</button>`).join("");
+$("chips").addEventListener("click",e=>{if(e.target.classList.contains("chip"))handle(e.target.textContent,true)});
+
+/* ============ init ============ */
+$("greet").textContent=greet();
+setInterval(()=>$("greet").textContent=greet(),60000);
+loadVoices();$("speakChk").checked=!S.muted;
+addMsg("bot",`${esc(greet())}! I'm Jarvis. Tap the <b>mic</b> and just talk, or pick a suggestion below. ${SR?"":"<br><small>Voice input needs Chrome or Edge — typing works everywhere.</small>"}`);
+renderAlarms();renderTimers();netPill();
+tickClock();setInterval(tickClock,1000);
+(async()=>{
+  if(!S.city&&navigator.permissions){try{const p=await navigator.permissions.query({name:"geolocation"});if(p.state==="granted")await useMyLocation()}catch(e){}}
+  loadWeather();
+})();
+loadMarkets();
+setInterval(loadWeather,10*60*1000);
+setInterval(loadMarkets,60*1000);
+</script>
+</body>
+</html>
